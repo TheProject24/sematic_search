@@ -1,99 +1,149 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Body, Depends
 from app.services.pdf_service import extract_text_from_pdf, chunk_text
 from app.services.ml_service import generate_embeddings, store
+from app.services.storage_service import cloud_storage
 from typing import List, Annotated
 from pydantic import BaseModel
 from app.services.llm_service import generate_answer
-from app.models.database import SessionLocal
-from app.models.database import ChatMessage
+from app.db import SessionLocal # Using the new db.py
+from app.models.message import ChatMessage
+from app.models.folder import ChatFolder
+from app.core.auth import get_current_user
 import hashlib
 
 router = APIRouter()
 
-def get_file_hash(file_bytes: bytes) -> str:
-    return hashlib.sha256(file_bytes).hexdigest()
-
-@router.post("/upload")
-async def upload_documents(files: Annotated[List[UploadFile], File(description="Multiple PDF files")]):
-    total_chunks_added = 0
-    processed_files = []
-    skipped_files = []
-
-    for file in files:
-        content = await file.read()
-        file_hash = get_file_hash(content)
-
-        # Checking against the store's set of hashes
-        if file_hash in store.seen_hashes:
-            skipped_files.append(file.filename)
-            continue
-        
-        # Process the new file
-        text = await extract_text_from_pdf(content)
-        chunks = chunk_text(text)
-        embeddings = generate_embeddings(chunks)
-    
-        # Save to PostgreSQL via ml_service
-        store.add_texts(chunks, embeddings, filename=file.filename)
-
-        # Track hash to prevent duplicates in current session
-        store.seen_hashes.add(file_hash)
-
-        total_chunks_added += len(chunks)
-        processed_files.append(file.filename)
-
-    return {
-        "filenames": processed_files,
-        "skipped_files": skipped_files,
-        "total_chunks": total_chunks_added,
-        "message": f"Processed {len(processed_files)} new files. Skipped {len(skipped_files)} duplicates."
-    }
-
 class SearchRequest(BaseModel):
     query: str
-    top_k: int = 3
+    folder_id: str
+    k: int = 3
 
-@router.post("/search")
-async def search_documents(request: SearchRequest, session_id: str = "default_user"):
-
+@router.post("/upload/folder/{folder_id}")
+async def upload_documents(
+    folder_id: str,
+    files: Annotated[List[UploadFile], File(description="Multiple PDF files")],
+    user_id = Depends(get_current_user)
+):
+    # user_id = "e86a94f4-6c08-46de-94e7-c13a2293e01f"
     db = SessionLocal()
 
     try:
+        folder = db.query(ChatFolder).filter(
+            ChatFolder.id == folder_id,
+            ChatFolder.user_id == user_id
+        ).first()
+        if not folder:
+            raise HTTPException(status_code=404, detail="Chat folder not found or access denied")
+        
+        total_chunks_added = 0
+        processed_files = []
+
+        for file in files:
+
+            file_bytes = await file.read()
+            storage_path = await cloud_storage.upload_file(file_bytes, file.filename, user_id)
+
+            text = await extract_text_from_pdf(file_bytes)
+            chunks = chunk_text(text)
+            embeddings = generate_embeddings(chunks)
+
+            store.add_texts(chunks, embeddings, filename=file.filename, folder_id=folder_id)
+
+            total_chunks_added += len(chunks)
+            processed_files.append(file.filename)
+
+        return {
+            "folder_id":folder_id,
+            "filenames": processed_files,
+            "total_chunks": total_chunks_added
+        }
+    finally:
+        db.close()
+
+
+@router.post("/search")
+async def search_documents(request: SearchRequest, user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        # Verify folder ownership
+        folder = db.query(ChatFolder).filter(
+            ChatFolder.id == request.folder_id,
+            ChatFolder.user_id == user_id
+        ).first()
+        
+        if not folder:
+            raise HTTPException(status_code=404, detail="Chat folder not found or access denied")
 
         history = db.query(ChatMessage).filter(
-            ChatMessage.session_id == session_id
+            ChatMessage.folder_id == request.folder_id
         ).order_by(ChatMessage.created_at.desc()).limit(10).all()
 
         formatted_history = [{ "role": m.role, "content": m.content } for m in reversed(history)]
 
-        user_msg = ChatMessage(session_id=session_id, role='user', content=request.query)
+        user_msg = ChatMessage(folder_id=request.folder_id, role='user', content=request.query)
         db.add(user_msg)
         db.commit()
 
         query_vector = generate_embeddings([request.query])
-        results = store.search(query_vector, k=request.top_k)
+        results = store.search(query_vector, folder_id=request.folder_id, k=request.k)
 
         ai_answer = await generate_answer(
-            query=request.query,
+            query = request.query,
             search_results=results,
             chat_history=formatted_history
         )
 
-        ai_msg = ChatMessage(session_id=session_id, role="assistant", content=ai_answer)
+        ai_msg = ChatMessage(folder_id=request.folder_id, role="assistant", content=ai_answer)
         db.add(ai_msg)
         db.commit()
 
         return {
-            "query": request.query,
+            "folder_id": request.folder_id,
             "ai_answer": ai_answer,
             "results": results
         }
-
+    
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-    
     finally:
         db.close()
 
+
+@router.post("/folders")
+async def create_folder(title: str = Body(..., embed=True), user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        new_folder = ChatFolder(title=title, user_id=user_id)
+        db.add(new_folder)
+        db.commit()
+        db.refresh(new_folder)
+        return {"id": new_folder.id, "title": new_folder.title}
+    finally:
+        db.close()
+
+@router.get("/folders")
+async def list_folders(user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        folders = db.query(ChatFolder).filter(ChatFolder.user_id == user_id).all()
+        return [{"id": f.id, "title": f.title} for f in folders]
+    finally:
+        db.close()
+
+
+
+@router.get("/history/{folder_id}")
+async def get_chat_history(folder_id: str, user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        # We filter by folder_id, and RLS in Supabase handles the user_id safety
+        messages = db.query(ChatMessage).filter(
+            ChatMessage.folder_id == folder_id
+        ).order_by(ChatMessage.created_at.asc()).all()
+        
+        return [{"role": m.role, "content": m.content} for m in messages]
+    finally:
+        db.close()

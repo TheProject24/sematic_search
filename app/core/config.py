@@ -1,9 +1,18 @@
-# app/core/config.py
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class Settings:
-    PROJECT_NAME: str = "PDF Semantic Search"
-    MODEL_NAME: str = "all-MiniLM-L6-v2"
-    CHUNK_SIZE: int = 500
-    CHUNK_OVERLAP: int = 50
+class Settings(BaseSettings):
+    # Existing fields
+    DATABASE_URL: str
+    SUPABASE_URL: str
+    SUPABASE_SERVICE_KEY: str
+    GROQ_API_KEY: str
+    BUCKET_NAME: str
+
+    # ADD THESE MISSING FIELDS:
+    DATABASE_URL_DEV: str | None = None  # Optional, so it doesn't break if missing
+    SUPABASE_KEY: str                    # This matches your SUPABASE_KEY in .env
+    SUPABASE_JWT_SECRET: str             # This matches your JWT secret in .env
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore") # 👈 THE MAGIC LINE
 
 settings = Settings()

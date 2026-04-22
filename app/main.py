@@ -2,13 +2,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.services.ml_service import store
 from app.api.v1.endpoints import router as api_router_v1
 from app.api.v2.endpoints import router as api_router_v2
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError # Added for the retry logic
-from app.models.database import Base, DATABASE_URL
+from app.models.base import Base
+# from app.core.settings import settings
 import os
 import time # Added for sleep
 
@@ -17,7 +19,7 @@ async def lifespan(app: FastAPI):
     print("STARTING UPPP...")
     
     # 1. Attempt to connect to DB with retries
-    from app.models.database import engine
+    from app.db import engine
     retries = 5
     connected = False
     
@@ -41,13 +43,9 @@ async def lifespan(app: FastAPI):
     if not connected:
         print("🛑 Critical: Could not connect to Database. Search will be unavailable.")
 
-    # 2. Existing FAISS load logic
-    store.load()
-    
     yield
-    
-    # On Shutdown
-    store.save()
+
+    print("SHUTTING DOWN . . . ")
 
 app = FastAPI(
     lifespan=lifespan,
@@ -56,8 +54,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials = True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(api_router_v1, prefix="/api/v1")
-app.include_router(api_router_v2, prefix="/api/v2")
+# app.include_router(api_router_v2, prefix="/api/v2")
 
 @app.get("/")
 async def root():
