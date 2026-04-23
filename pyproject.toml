@@ -9,7 +9,6 @@ dependencies = [
     "cryptography>=46.0.7",
     "fastembed>=0.5.1",
     "fastapi>=0.136.0",
-    "maturin>=1.13.1",
     "openai>=2.32.0",
     "passlib>=1.7.4",
     "pgvector>=0.4.2",
@@ -26,9 +25,5 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["maturin>=1.13.1"]
-build-backend = "maturin"
-
-[tool.maturin]
-manifest-path = "rust_parser/Cargo.toml"
-module-name = "rust_parser"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

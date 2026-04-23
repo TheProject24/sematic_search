@@ -48,7 +48,9 @@ COPY --from=builder /build/rust_parser/target/wheels /tmp/wheels
 COPY . .
 
 # Install dependencies and the built Rust extension
-RUN uv sync --no-dev && \
+# --no-install-project skips building the main project (which uses maturin as
+# build-backend) so we don't need a C compiler in this stage.
+RUN uv sync --no-dev --no-install-project && \
     uv pip install /tmp/wheels/rust_parser*.whl
 
 # Expose the API port
