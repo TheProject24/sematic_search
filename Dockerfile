@@ -48,7 +48,7 @@ COPY --from=builder /build/rust_parser/target/wheels /tmp/wheels
 COPY . .
 
 # Install dependencies and the built Rust extension
-RUN uv sync --no-dev --frozen --no-install-project && \
+RUN uv sync --no-dev && \
     uv pip install /tmp/wheels/rust_parser*.whl
 
 # Expose the API port
