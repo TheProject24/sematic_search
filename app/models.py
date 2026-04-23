@@ -40,7 +40,7 @@ class DocumentChunk(Base):
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
     embedding = Column(Vector(384))
-    metadata = Column(JSON)
+    meta = Column("metadata", JSON)
     
     document = relationship("Document", back_populates="chunks")
 

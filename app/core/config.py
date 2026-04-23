@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
     GROQ_API_KEY: str
+    LOCAL_SECRET_KEY: str
     BUCKET_NAME: str
 
     # ADD THESE MISSING FIELDS:

@@ -5,11 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.services.ml_service import store
-from app.api.v1.endpoints import router as api_router_v1
-from app.api.v2.endpoints import router as api_router_v2
+from app.api.v1 import auth, document
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError # Added for the retry logic
-from app.models.base import Base
+from app.models import Base
 # from app.core.settings import settings
 import os
 import time # Added for sleep
@@ -62,7 +61,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router_v1, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(document.router, prefix="/api/v1", tags=["RAG"])
 # app.include_router(api_router_v2, prefix="/api/v2")
 
 @app.get("/")

@@ -1,51 +1,25 @@
 import jwt
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
-def get_current_user(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization Header")
+# This triggers the "Authorize" button in Swagger UI
+security = HTTPBearer()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # HTTPBearer automatically extracts the token and strips the "Bearer " prefix
+    token = credentials.credentials
     
-    token = authorization.replace("Bearer ", "")
-    
-    # --- Attempt 1: HS256 (Supabase Default) ---
     try:
-        payload = jwt.decode(
-            token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={
-                "verify_aud": False,
-                "verify_iat": False,
-                "verify_exp": True # We should verify expiration
-            }
-        )
-        return payload.get("sub")
+        payload = jwt.decode(token, settings.LOCAL_SECRET_KEY, algorithms=["HS256"])
+        user_id: str = payload.get("sub")
+        
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+            
+        return user_id
+        
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except (jwt.DecodeError, jwt.InvalidAlgorithmError):
-        # If HS256 fails, it might be an RS256 token from an external provider/JWKS
-        pass
-
-    # --- Attempt 2: RS256 (Supabase JWKS) ---
-    try:
-        SUPABASE_JWKS_URL = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/jwks"
-        jwks_client = jwt.PyJWKClient(SUPABASE_JWKS_URL)
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
-        
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "ES256"],
-            options={
-                "verify_aud": False,
-                "verify_iss": False,
-                "verify_exp": True
-            }
-        )
-        return payload.get("sub")
-
-    except Exception as e:
-        # Fallback for debugging
-        print(f"DEBUG AUTH ERROR: {type(e).__name__} - {str(e)}")
-        raise HTTPException(status_code=401, detail="Authentication Failed")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
