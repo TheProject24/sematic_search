@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy the built wheels from the builder stage
-COPY --from=builder /build/target/wheels /tmp/wheels
+COPY --from=builder /build/rust_parser/target/wheels /tmp/wheels
 
 # Copy application source
 COPY . .
