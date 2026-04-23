@@ -1,0 +1,67 @@
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin: 16px 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  flex-shrink: 0;
+}
+.upload-zone:hover,
+.upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(108,99,255,.06);
+}
+.upload-zone.uploading {
+  border-color: var(--accent);
+  background: rgba(108,99,255,.08);
+  cursor: default;
+}
+
+.upload-icon     { font-size: 24px; flex-shrink: 0; }
+.upload-text     { font-size: 13px; color: var(--muted); }
+.upload-text strong { color: var(--text); }
+.upload-filename { color: var(--accent-h); }
+
+/* Spinner shown during upload */
+.upload-spinner {
+  width: 22px; height: 22px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#file-input { display: none; }
+
+/* Document list */
+.doc-section       { padding: 14px 20px 0; flex-shrink: 0; }
+.doc-section-title { font-size: 11px; font-weight: 600; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+
+.doc-list  { display: flex; flex-wrap: wrap; gap: 8px; max-height: 96px; overflow-y: auto; }
+.doc-empty { font-size: 12px; color: var(--muted); }
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px 4px 10px;
+  font-size: 12px;
+  max-width: 210px;
+}
+.doc-status         { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.status-processing  { background: #f59e0b; animation: blink 1.2s infinite; }
+.status-completed   { background: var(--success); }
+.status-error       { background: var(--danger); }
+.doc-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@keyframes blink { 0%,100% { opacity:1 } 50% { opacity:.3 } }

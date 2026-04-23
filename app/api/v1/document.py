@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Body
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Body, BackgroundTasks, status
 from typing import List, Annotated
 from app.db import SessionLocal
 from app.models import User, Folder, Document, ChatMessage
@@ -21,6 +21,8 @@ async def create_folder(
     db.refresh(folder)
     db.close()
     return folder
+
+
 
 @router.post("/upload/{folder_id}")
 async def upload(
@@ -55,6 +57,9 @@ async def upload(
     db.close()
     return {"status": "success", "filename": file.filename}
 
+
+
+
 @router.post("/chat/{folder_id}")
 async def chat(
     folder_id: str, 
@@ -83,7 +88,7 @@ async def chat(
 
     db.add(ChatMessage(folder_id=folder_id, role="user", content=query))
     db.add(ChatMessage(folder_id=folder_id, role="assistant", content=ans))
-    
+
     db.commit()
     db.close()
     return {"answer": ans, "context": context}

@@ -30,7 +30,7 @@ class Document(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=False)
     filename = Column(String, nullable=False)
-    
+    status = Column(String, default="processing")
     folder = relationship("Folder", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 

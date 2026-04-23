@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Semantic Search</title>
+
+  <link rel="stylesheet" href="css/vars.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/workspace.css" />
+  <link rel="stylesheet" href="css/chat.css" />
+</head>
+<body>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1>PDF Semantic Search</h1>
+    <p class="subtitle">Upload PDFs, ask questions, get answers.</p>
+
+    <div class="auth-tabs">
+      <button id="tab-login" class="active">Sign In</button>
+      <button id="tab-register">Register</button>
+    </div>
+
+    <div class="field">
+      <label for="auth-email">EMAIL</label>
+      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label for="auth-password">PASSWORD</label>
+      <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button id="auth-btn" class="btn btn-primary btn-full">Sign In</button>
+    <div id="auth-error" role="alert"></div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app-screen">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <span class="topbar-brand">⚡ PDF Semantic Search</span>
+    <div class="topbar-right">
+      <span class="topbar-email" id="topbar-email"></span>
+      <button id="logout-btn" class="btn btn-ghost" style="font-size:13px;padding:6px 12px;">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <span>Folders</span>
+        <button id="new-folder-btn" title="New folder" aria-label="Create new folder">+</button>
+      </div>
+      <div class="folder-list" id="folder-list" role="list">
+        <p class="empty-hint">No folders yet. Hit + to create one.</p>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="content">
+
+      <!-- Empty state -->
+      <div id="no-folder">
+        <span class="icon">📂</span>
+        <p>Select or create a folder to begin</p>
+      </div>
+
+      <!-- Folder workspace -->
+      <div id="folder-workspace">
+
+        <!-- Workspace header -->
+        <div class="workspace-header">
+          <span class="workspace-title" id="workspace-folder-name"></span>
+        </div>
+
+        <!-- Upload zone -->
+        <div class="upload-zone" id="upload-zone" role="button" tabindex="0"
+             aria-label="Click or drag a PDF here to upload">
+          <span class="upload-icon">📤</span>
+          <div class="upload-text">
+            <strong>Click to upload</strong> or drag &amp; drop a PDF
+          </div>
+        </div>
+        <input type="file" id="file-input" accept=".pdf" aria-hidden="true" />
+
+        <!-- Document list -->
+        <div class="doc-section">
+          <div class="doc-section-title">Documents</div>
+          <div class="doc-list" id="doc-list">
+            <span class="doc-empty">No documents yet.</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Chat -->
+        <div id="chat-area">
+          <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
+          <div class="chat-input-row">
+            <textarea
+              id="chat-input"
+              rows="1"
+              placeholder="Ask a question about your documents… (Enter to send, Shift+Enter for newline)"
+              aria-label="Chat message"
+            ></textarea>
+            <button id="send-btn" class="send-btn" aria-label="Send message">↑</button>
+          </div>
+        </div>
+
+      </div><!-- /folder-workspace -->
+    </main>
+  </div>
+</div>
+
+<!-- New Folder Modal -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <h2 id="modal-title">New Folder</h2>
+    <div class="field">
+      <label for="new-folder-name">FOLDER NAME</label>
+      <input id="new-folder-name" type="text" placeholder="My Research" autocomplete="off" />
+    </div>
+    <div class="modal-error" id="folder-modal-error" role="alert"></div>
+    <div class="modal-actions">
+      <button id="modal-cancel-btn" class="btn btn-ghost">Cancel</button>
+      <button id="modal-create-btn" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Scripts — Single module entry point for Vite/Prod optimization -->
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
