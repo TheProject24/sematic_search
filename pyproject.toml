@@ -32,7 +32,14 @@ requires = ["maturin>=1.13.1"]
 build-backend = "maturin"
 
 [[tool.uv.index]]
+name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
 
 [tool.maturin]
 manifest-path = "rust_parser/Cargo.toml"

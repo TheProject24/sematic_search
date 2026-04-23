@@ -22,8 +22,9 @@ WORKDIR /build
 COPY pyproject.toml uv.lock README.md ./
 COPY rust_parser/ rust_parser/
 
-# Build the Rust wheel
-RUN uv run maturin build --release --strip --manifest-path rust_parser/Cargo.toml
+# Build the Rust wheel (--no-install-project avoids triggering maturin's build-system
+# dep resolution for pdf-semantic-search itself, which would fail due to puccinialin)
+RUN uv run --no-install-project maturin build --release --strip --manifest-path rust_parser/Cargo.toml
 
 # --- STAGE 2: Final Production Image ---
 FROM python:3.12-slim
@@ -47,11 +48,13 @@ COPY --from=builder /build/rust_parser/target/wheels /tmp/wheels
 COPY . .
 
 # Install dependencies and the built Rust extension
-RUN uv sync --no-dev --frozen && \
+RUN uv sync --no-dev --frozen --no-install-project && \
     uv pip install /tmp/wheels/rust_parser*.whl
 
 # Expose the API port
 EXPOSE 8000
 
 # Use the PORT environment variable provided by Render
-CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Call uvicorn directly from the venv to avoid uv re-syncing (and re-triggering
+# build-system resolution) on every container start
+CMD ["sh", "-c", "/app/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
