@@ -22,9 +22,9 @@ WORKDIR /build
 COPY pyproject.toml uv.lock README.md ./
 COPY rust_parser/ rust_parser/
 
-# Build the Rust wheel (--no-install-project avoids triggering maturin's build-system
-# dep resolution for pdf-semantic-search itself, which would fail due to puccinialin)
-RUN uv run --no-install-project maturin build --release --strip --manifest-path rust_parser/Cargo.toml
+# Build the Rust wheel via uvx so maturin runs in its own isolated env,
+# not the project venv (avoids puccinialin/tqdm build-system dep resolution)
+RUN uvx --from 'maturin>=1.13.1' maturin build --release --strip --manifest-path rust_parser/Cargo.toml
 
 # --- STAGE 2: Final Production Image ---
 FROM python:3.12-slim
