@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+storage/
+frontend/
+target/
+.vscode
+.python-version
+README.md
+pdf_semantic_search_hero.png
