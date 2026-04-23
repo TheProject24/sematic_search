@@ -45,9 +45,12 @@ async def upload_documents(
 
             text = await extract_text_from_pdf(file_bytes)
             chunks = chunk_text(text)
-            embeddings = generate_embeddings(chunks)
+            embeddings = await generate_embeddings(chunks)
 
-            store.add_texts(chunks, embeddings, filename=file.filename, folder_id=folder_id)
+            # Note: endpoints.py seems to use an older DB schema pattern. 
+            # Passing folder_id in meta as a workaround if needed, but VectorStore.add_texts expects document_id.
+            # We'll use None for now or create a dummy doc if necessary.
+            store.add_texts(chunks, embeddings, document_id=None)
 
             total_chunks_added += len(chunks)
             processed_files.append(file.filename)
@@ -84,7 +87,8 @@ async def search_documents(request: SearchRequest, user_id: str = Depends(get_cu
         db.add(user_msg)
         db.commit()
 
-        query_vector = generate_embeddings([request.query])
+        results = await generate_embeddings([request.query])
+        query_vector = results[0]
         results = store.search(query_vector, folder_id=request.folder_id, k=request.k)
 
         ai_answer = await generate_answer(

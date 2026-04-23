@@ -76,7 +76,8 @@ async def chat(
     formatted_history = [{"role": m.role, "content": m.content} for m in reversed(history)]
 
     # 2. Search
-    q_emb = generate_embeddings([query])[0]
+    results = await generate_embeddings([query])
+    q_emb = results[0]
     search_results = store.search(q_emb, folder_id=folder_id) # Returns [{"text":..., "source":...}]
 
     # 3. LLM Generate

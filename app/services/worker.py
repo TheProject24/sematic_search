@@ -9,7 +9,7 @@ async def process_pdf_task(doc_id: str, file_bytes: bytes):
         text = await extract_text_from_pdf(file_bytes)
 
         chunks = chunk_text(text)
-        embs = generate_embeddings(chunks)
+        embs = await generate_embeddings(chunks)
         store.add_texts(chunks, embs, document_id=doc_id)
 
         doc = db.query(Document).filter(Document.id == doc_id).first()

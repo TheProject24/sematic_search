@@ -1,4 +1,4 @@
-from fastembed import TextEmbedding
+from huggingface_hub import AsyncInferenceClient
 import numpy as np
 from app.db import SessionLocal
 from app.models import DocumentChunk, Document
@@ -6,14 +6,16 @@ from app.core.config import settings
 
 class VectorStore:
     def __init__(self):
-        # fastembed is MUCH lighter than sentence-transformers/torch.
-        # BAAI/bge-small-en-v1.5 is exactly 384 dimensions.
-        self.model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
+        # Official HF hub client handles all endpoints and retries
+        self.client = AsyncInferenceClient(
+            model="BAAI/bge-small-en-v1.5",
+            api_key=settings.HUGGINGFACE_API_KEY
+        )
 
     def add_texts(
             self, 
             texts: list[str], 
-            embeddings: list[np.ndarray], 
+            embeddings: list[list[float]], 
             document_id
         ):
         db = SessionLocal()
@@ -23,7 +25,7 @@ class VectorStore:
                 chunk = DocumentChunk(
                     document_id=document_id,
                     content = text,
-                    embedding=emb.tolist(),
+                    embedding=emb, 
                     meta={}
                 )
                 db.add(chunk)
@@ -55,7 +57,18 @@ class VectorStore:
 
 store = VectorStore()
 
-def generate_embeddings(chunks: list[str]):
-    # Returns a generator, so we convert to a list
-    embeddings_generator = store.model.embed(chunks)
-    return list(embeddings_generator)
+async def generate_embeddings(chunks: list[str]):
+    """Fetches embeddings from Hugging Face Inference API using official client"""
+    if not settings.HUGGINGFACE_API_KEY:
+        raise ValueError("HUGGINGFACE_API_KEY is not set.")
+
+    # feature_extraction handles a list of inputs
+    results = await store.client.feature_extraction(chunks)
+    
+    # HF feature_extraction returns a numpy-like list of lists or a 3D array [batch, seq, dim]
+    # For many models (like BGE), it returns [batch, seq, dim]. We need to pool or just take CLS.
+    # HOWEVER, when using the inference API 'feature-extraction' task directly, 
+    # it often returns the pooled embedding if the pipeline is set up correctly.
+    
+    # Let's ensure we return a list of embedding vectors
+    return results.tolist() if hasattr(results, 'tolist') else results

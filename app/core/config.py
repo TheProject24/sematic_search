@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str                    # This matches your SUPABASE_KEY in .env
     SUPABASE_JWT_SECRET: str             # This matches your JWT secret in .env
     OPENAI_API_KEY: str | None = None    # Optional, fallback to GROQ_API_KEY if needed
+    HUGGINGFACE_API_KEY: str | None = None  # NEW: For memory-efficient embeddings
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore") # 👈 THE MAGIC LINE
 

@@ -51,14 +51,11 @@ async def upload(
     db.refresh(doc)
 
     chunks = chunk_text(text)
-    embs = generate_embeddings(chunks)
+    embs = await generate_embeddings(chunks)
     store.add_texts(chunks, embs, document_id=doc.id)
 
     db.close()
     return {"status": "success", "filename": file.filename}
-
-
-
 
 @router.post("/chat/{folder_id}")
 async def chat(
@@ -81,7 +78,8 @@ async def chat(
 
     if not folder: raise HTTPException(404)
 
-    q_emb = generate_embeddings([query])
+    results = await generate_embeddings([query])
+    q_emb = results[0]
     context = store.search(q_emb, folder_id=folder_id)
 
     ans = await generate_answer(query, context, formatted_history)
