@@ -1,17 +1,19 @@
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 import numpy as np
 from app.db import SessionLocal
 from app.models import DocumentChunk, Document
-import json
+from app.core.config import settings
 
 class VectorStore:
     def __init__(self):
-        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        # fastembed is MUCH lighter than sentence-transformers/torch.
+        # BAAI/bge-small-en-v1.5 is exactly 384 dimensions.
+        self.model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
     def add_texts(
             self, 
             texts: list[str], 
-            embeddings: np.ndarray, 
+            embeddings: list[np.ndarray], 
             document_id
         ):
         db = SessionLocal()
@@ -34,17 +36,15 @@ class VectorStore:
         finally:
             db.close()
 
-    def search(self, query_vector: np.ndarray, folder_id: str, k:int = 5):
+    def search(self, query_vector: list[float], folder_id: str, k:int = 5):
         db = SessionLocal()
 
         try: 
-            v = query_vector[0].tolist()
-
             results = (
                 db.query(DocumentChunk)
                 .join(Document)
                 .filter(Document.folder_id == folder_id)
-                .order_by(DocumentChunk.embedding.l2_distance(v))
+                .order_by(DocumentChunk.embedding.l2_distance(query_vector))
                 .limit(k)
                 .all()
             )
@@ -56,4 +56,6 @@ class VectorStore:
 store = VectorStore()
 
 def generate_embeddings(chunks: list[str]):
-    return store.model.encode(chunks)
+    # Returns a generator, so we convert to a list
+    embeddings_generator = store.model.embed(chunks)
+    return list(embeddings_generator)
